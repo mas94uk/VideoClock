@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<!-- Play a video full-screen, syncronised to the current clock time. -->
+<!-- To be used with 12 or 24-hour-long videos of clocks. -->
+<html>
+<style>
+    html, body {
+        background-color: black;
+        margin: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .video-container {
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        vertical-align:bottom;
+        justify-content: center;
+        height: 100%;
+    }
+
+    .video-container video {
+        object-fit:cover;
+        width: 100% !important;
+        height: 100%;
+        object-position: bottom;
+    }
+</style>
+
+<body>
+    <div class="video-container">
+        <video id="clockvid" autoplay muted>
+            <source src="standardtime.mp4" type="video/mp4" />
+            Your browser does not support HTML video.
+        </video>
+    </div>
+</body>
+
+<script>
+    // Approximate video durations relating to 1m, 1h, 12h, 24h
+    const ONE_MINUTE_ISH = 60 - 5;
+    const ONE_HOUR_ISH = (60 * 60) - 5;
+    const TWELVE_HOURS_ISH = (12 * 60 * 60) - 60;
+    const TWENTY_FOUR_HOURS_ISH = (24 * 60 * 60) - 60;
+
+    // The smallest timing error to correct
+    const TOLERANCE = 2;
+
+    function onVideoLoaded() {
+        // Sync the video immediately, and then every second
+        syncVideo();
+        setInterval(syncVideo, 1 * 1000);
+    }
+
+    function syncVideo() {
+        const now = new Date();
+        var duration = clockVid.duration;
+
+        // Calcuate the target time.
+        var targetTime = 0;
+        if (duration >= TWENTY_FOUR_HOURS_ISH) {
+            targetTime += now.getHours() * 60 * 60;
+        } else if (duration >= TWELVE_HOURS_ISH) {
+            targetTime += (now.getHours() % 12) * 60 * 60;
+        }
+        if (duration >= ONE_HOUR_ISH) {
+            targetTime += now.getMinutes() * 60;
+        }
+        if (duration >= ONE_MINUTE_ISH) {
+            targetTime += now.getSeconds();
+            targetTime += now.getMilliseconds() / 1000;
+        }
+
+        // If we want a position after the end of the video, nothing we can do
+        if (targetTime > duration) {
+            console.log("Target time is after end of video; not syncing");
+            return;
+        }
+
+        // Compare to the current video time. If we are out by more than allowed, correct   
+        const diff = Math.abs(clockVid.currentTime - targetTime);
+        if (diff > TOLERANCE) {
+            console.log("Setting video position to " + targetTime);
+            clockVid.currentTime = targetTime;
+        }
+    }
+
+    var clockVid = document.getElementById("clockvid");
+    clockVid.addEventListener('loadeddata', onVideoLoaded, false);
+</script>
+
+</html>
